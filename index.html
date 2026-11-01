@@ -28,11 +28,14 @@ nav button{flex:1;background:0;border:0;border-radius:14px;padding:7px 4px;color
 .pane{width:100%;max-width:720px;max-height:92vh;overflow:auto;padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-radius:22px 22px 0 0;background:rgba(22,24,44,.9);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border:1px solid #ffffff1f}
 #th{max-height:30vh;overflow:auto;margin:8px 0}.msg{background:#ffffff12;border-radius:14px;padding:8px 12px;margin:6px 40px 6px 0}.msg.me{margin:6px 0 6px 40px;background:#7c5cff44}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 12px);transform:translate(-50%,-150%);transition:.3s;background:#20233fee;border:1px solid #ffffff30;border-radius:14px;padding:10px 16px;z-index:50;max-width:90%}#toast.on{transform:translate(-50%,0)}
-.auth{max-width:380px;margin:12vh auto;padding:22px}h1,h3{margin:0 0 6px}
+.ck{display:flex;gap:10px;align-items:center;padding:6px 0;margin:0;color:#e8eaf6;font-size:15px}.ck input{width:20px;height:20px;margin:0}.av{display:inline-flex;width:34px;height:34px;border-radius:50%;align-items:center;justify-content:center;font-style:normal;font-weight:700;color:#fff;flex:none}.av.sm{width:22px;height:22px;font-size:12px}.who{display:flex;gap:6px;align-items:center}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}.stat{padding:14px;margin:0}.stat b{font-size:30px;line-height:1;display:block}.bar{height:8px;border-radius:6px;background:#ffffff18;overflow:hidden;margin-top:10px}.bar i{display:block;height:100%;background:linear-gradient(90deg,#7c5cff,#2ec4f1)}
+.hero{text-align:center;padding:28px 16px}.big{font-size:46px}.s-work{border-left:3px solid #2ec4f1}.s-review{border-left:3px solid #ffc04d}.s-done{border-left:3px solid #4ade80;opacity:.8}.s-new{border-left:3px solid #8f7bff}
+.ld{display:flex;gap:14px;overflow:auto;margin-top:8px}.ld div{text-align:center;min-width:54px}.sec{margin:18px 2px 2px;color:#aab0d0;font-size:13px}.ck{display:flex;gap:10px;align-items:center;padding:6px 0;margin:0;color:#e8eaf6;font-size:15px}.ck input{width:20px;height:20px;margin:0}.hi h1{font-size:26px;margin:6px 0 2px}.msg img{max-width:100%;border-radius:12px;margin-top:6px}.msg audio{width:100%;margin-top:6px}.auth{max-width:380px;margin:12vh auto;padding:22px}h1,h3{margin:0 0 6px}
 </style></head><body><div id="app"></div><div id="sheet"></div><div id="toast"></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const URL_='https://qjgjwavttmpwzwqoxhpv.supabase.co',KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFqZ2p3YXZ0dG1wd3p3cW94aHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM1MTAxNzgsImV4cCI6MjEwOTA4NjE3OH0.f8vpX2w8iMwSgz6e1iCTUvJ8n0_79fr8uwtMF0Atzzk';
+const URL_='ВСТАВЬТЕ_Project_URL',KEY='ВСТАВЬТЕ_anon_public_key';
 const sb=supabase.createClient(URL_,KEY);
 const $=s=>document.querySelector(s),h=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ST={new:'Новая',work:'В работе',review:'На проверке',done:'Закрыта'},PR={low:'Низкий',mid:'Обычный',high:'Срочно'};
@@ -52,11 +55,6 @@ else{r=await sb.auth.signUp({email:e,password:p,options:{data:{name:$('#n').valu
 if(!r.error&&!r.data.session)return toast('Мы отправили письмо: подтвердите почту и войдите')}
 if(r.error)return toast(r.error.message);start(r.data.user)}
 
-async function load(){
-const [p,f,i,r]=await Promise.all([sb.from('profiles').select('*'),sb.from('families').select('*,family_members(user_id)').order('created_at',{ascending:false}),sb.from('invitations').select('*').eq('status','pending'),sb.from('friendships').select('*')]);
-P=Object.fromEntries((p.data||[]).map(x=>[x.id,x]));fams=f.data||[];invs=i.data||[];fr=r.data||[];
-cur=fams.find(x=>cur&&x.id==cur.id)||fams[0]||null;tasks=[];
-if(cur){const t=await sb.from('tasks').select('*,task_watchers(user_id)').eq('family_id',cur.id).order('created_at',{ascending:false});tasks=t.data||[]}}
 async function start(u){me=u;await load();render();sb.channel('rt').on('postgres_changes',{event:'*',schema:'public'},onChange).subscribe();
 const n=tasks.filter(t=>t.assignee==me.id&&dl(t)).length;if(n)toast(`⏰ Задач с горящим дедлайном: ${n}`)}
 async function onChange(p){const t=p.table,n=p.new||{},ins=p.eventType=='INSERT';
@@ -68,14 +66,10 @@ if(t=='task_comments'||t=='task_events'){if(openId&&$('#th'))thr();return}
 await load();render();if(openId&&t=='tasks')taskView()}
 
 function render(){const bd={fam:inInv().length,fr:inFr().length};
-$('#app').innerHTML=`<header><select onchange="pick(this.value)">${fams.map(f=>`<option value="${f.id}" ${cur?.id==f.id?'selected':''}>${h(f.name)}</option>`).join('')||'<option>Нет семьи</option>'}</select><span class=sp></span><span class=m>${h(nm(me.id))}</span><button class=ghost onclick="sb.auth.signOut().then(()=>location.reload())">Выйти</button></header><main>${tab=='tasks'?tasksV():tab=='fam'?famV():frV()}</main><nav class=g>${[['tasks','✓','Задачи'],['fam','🏠','Семьи'],['fr','🤝','Друзья']].map(([k,i,l])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';render()">${i}<br>${l}${bd[k]?`<b class=bd>${bd[k]}</b>`:''}</button>`).join('')}</nav>`}
+$('#app').innerHTML=`<header><select onchange="pick(this.value)">${fams.map(f=>`<option value="${f.id}" ${cur?.id==f.id?'selected':''}>${h(f.name)}</option>`).join('')||'<option>Нет семьи</option>'}</select><span class=sp></span>${av(me.id)}<button class=ghost onclick="sb.auth.signOut().then(()=>location.reload())">Выйти</button></header><main>${tab=='tasks'?tasksV():tab=='shop'?shopV():tab=='fam'?famV():frV()}</main><nav class=g>${[['tasks','✓','Задачи'],['shop','🛒','Покупки'],['fam','🏠','Семьи'],['fr','🤝','Друзья']].map(([k,i,l])=>`<button class="${tab==k?'on':''}" onclick="tab='${k}';render()">${i}<br>${l}${bd[k]?`<b class=bd>${bd[k]}</b>`:''}</button>`).join('')}</nav>`}
 async function pick(id){cur=fams.find(f=>f.id==id);await load();render()}
 
-function tasksV(){if(!cur)return`<div class="g card">Создайте свою семью или примите приглашение на вкладке «Семьи».</div>`;
-const l=tasks.filter(t=>flt=='done'?t.status=='done':t.status!='done'&&(flt=='all'||t.assignee==me.id||t.task_watchers.some(w=>w.user_id==me.id)));
-return`<div class=tabs>${[['mine','Мои'],['all','Все'],['done','Закрытые']].map(([k,v])=>`<button class="${flt==k?'on':''}" onclick="flt='${k}';render()">${v}</button>`).join('')}</div>${l.map(t=>`<div class="g card tk" onclick="openTask('${t.id}')"><div class=row><b>${h(t.title)}</b><span class="chip ${t.priority}">${PR[t.priority]}</span></div><div class=m>Исполнитель: ${h(nm(t.assignee))} · <span class="${dl(t)}">${fmt(t.deadline)}</span> · ${ST[t.status]}</div></div>`).join('')||'<p class=m>Здесь пока нет задач. Нажмите ＋, чтобы создать первую.</p>'}<button class=fab onclick=newTask()>＋</button>`}
-
-function famV(){return`${inInv().map(i=>`<div class="g card"><b>Приглашение в семью «${h(i.family_name)}»</b><div class=row><button class=btn onclick="accept('${i.id}')">Принять</button><button class=ghost onclick="decline('${i.id}')">Отклонить</button></div></div>`).join('')}<div class="g card"><b>Новая семья</b><input id=fn placeholder="Название"><button class=btn onclick=mkFam()>Создать семью</button></div>${cur?`<div class="g card"><b>${h(cur.name)}</b><p class=m>Участники: ${members().map(m=>h(m.name)).join(', ')}</p><input id=ie type=email placeholder="Почта для приглашения"><button class=btn onclick=invite()>Пригласить</button></div>`:''}`}
+async function inviteFr(i){const r=await sb.from('invitations').insert({family_id:cur.id,email:P[i].email,family_name:cur.name});toast(r.error?r.error.message:'Приглашение отправлено')}
 async function mkFam(){const n=$('#fn').value.trim();if(!n)return;const r=await sb.from('families').insert({name:n});if(r.error)return toast(r.error.message);cur=null;await load();render()}
 async function invite(){const e=$('#ie').value.trim().toLowerCase();if(!e)return;const r=await sb.from('invitations').insert({family_id:cur.id,email:e,family_name:cur.name});toast(r.error?r.error.message:'Приглашение отправлено');$('#ie').value=''}
 async function accept(id){const r=await sb.rpc('accept_invitation',{inv:id});if(r.error)return toast(r.error.message);await load();render()}
@@ -87,22 +81,85 @@ async function frAns(id,s){await sb.from('friendships').update({status:s}).eq('i
 
 function sheet(html){const s=$('#sheet');s.innerHTML='<div class=pane>'+html+'</div>';s.classList.add('on');s.onclick=e=>{if(e.target.id=='sheet')closeSheet()}}
 function closeSheet(){$('#sheet').classList.remove('on');openId=null}
-function newTask(){const c=members().filter(m=>m.id==me.id||friendIds().includes(m.id)),o=m=>`<option value="${m.id}">${h(m.name)}</option>`;
-sheet(`<h3>Новая задача</h3><input id=tt placeholder="Название"><textarea id=td rows=3 placeholder="Описание"></textarea><label>Дедлайн<input id=tdl type=datetime-local></label><label>Приоритет<select id=tp><option value=mid>Обычный</option><option value=high>Срочно</option><option value=low>Низкий</option></select></label><label>Исполнитель (вы или друг из семьи)<select id=ta>${c.map(o).join('')}</select></label><label>Наблюдатели<select id=tw multiple>${c.filter(m=>m.id!=me.id).map(o).join('')}</select></label><button class=btn onclick=saveTask()>Создать задачу</button>`)}
-async function saveTask(){const t=$('#tt').value.trim();if(!t)return toast('Введите название задачи');const d=$('#tdl').value;
-const r=await sb.from('tasks').insert({family_id:cur.id,title:t,description:$('#td').value,deadline:d?new Date(d).toISOString():null,priority:$('#tp').value,assignee:$('#ta').value}).select().single();
-if(r.error)return toast(r.error.message);
-const w=[...$('#tw').selectedOptions].map(o=>({task_id:r.data.id,user_id:o.value}));if(w.length)await sb.from('task_watchers').insert(w);
-closeSheet();await load();render()}
-
 function openTask(id){openId=id;thm='c';taskView()}
 function taskView(){const t=tasks.find(x=>x.id==openId);if(!t)return closeSheet();
-sheet(`<div class=row><h3>${h(t.title)}</h3><button class=ghost onclick=closeSheet()>✕</button></div><p>${h(t.description)||'<span class=m>Без описания</span>'}</p><div class=m>Автор: ${h(nm(t.author))}<br>Исполнитель: ${h(nm(t.assignee))}<br>Дедлайн: <span class="${dl(t)}">${fmt(t.deadline)}</span> · ${PR[t.priority]}<br>Наблюдатели: ${t.task_watchers.map(w=>h(nm(w.user_id))).join(', ')||'нет'}</div><div class=tabs>${Object.entries(ST).map(([k,v])=>`<button class="${t.status==k?'on':''}" onclick="setSt('${t.id}','${k}')">${v}</button>`).join('')}</div><div class=tabs><button id=b1 onclick="thr('c')">Чат</button><button id=b2 onclick="thr('h')">История</button></div><div id=th></div><div id=cf class=row><input id=cm placeholder="Сообщение" onkeydown="if(event.key=='Enter')send()"><button class=btn onclick=send()>➤</button></div>`);thr()}
+sheet(`<div class=row><h3>${h(t.title)}</h3><button class=ghost onclick=closeSheet()>✕</button></div><p>${h(t.description)||'<span class=m>Без описания</span>'}</p><div class=m>Автор: ${h(nm(t.author))}<br>Исполнитель: ${h(nm(t.assignee))}<br>Дедлайн: <span class="${dl(t)}">${fmt(t.deadline)}</span> · ${PR[t.priority]}<br>Наблюдатели: ${t.task_watchers.map(w=>h(nm(w.user_id))).join(', ')||'нет'}</div><div class=tabs>${Object.entries(ST).map(([k,v])=>`<button class="${t.status==k?'on':''}" onclick="setSt('${t.id}','${k}')">${v}</button>`).join('')}</div>${ckV(t)}<div class=tabs><button id=b1 onclick="thr('c')">Чат</button><button id=b2 onclick="thr('h')">История</button></div><div id=th></div><div id=cf class=row><label class=ghost style="margin:0">📎<input type=file hidden onchange=pick1(event)></label><button class=ghost id=mic onclick=mic()>🎤</button><input id=cm placeholder="Сообщение" onkeydown="if(event.key=='Enter')send()"><button class=btn onclick=send()>➤</button></div>`);thr()}
+async function send(){const b=$('#cm').value.trim();if(!b)return;$('#cm').value='';await sb.from('task_comments').insert({task_id:openId,body:b});thr()}
+
+
+
+let TP=[],SH=[];
+const av=(id,c='')=>{let k=0;for(const x of String(id))k+=x.charCodeAt(0);return`<i class="av ${c}" style="background:hsl(${k*47%360} 55% 42%)">${h((nm(id)[0]||'?').toUpperCase())}</i>`};
+async function load(){
+const [p,f,i,r]=await Promise.all([sb.from('profiles').select('*'),sb.from('families').select('*,family_members(user_id)').order('created_at',{ascending:false}),sb.from('invitations').select('*').eq('status','pending'),sb.from('friendships').select('*')]);
+P=Object.fromEntries((p.data||[]).map(x=>[x.id,x]));fams=f.data||[];invs=i.data||[];fr=r.data||[];
+cur=fams.find(x=>cur&&x.id==cur.id)||fams[0]||null;tasks=[];TP=[];SH=[];
+if(cur){const [t,q]=await Promise.all([sb.from('tasks').select('*,task_watchers(user_id)').eq('family_id',cur.id).order('created_at',{ascending:false}),sb.from('task_templates').select('*').eq('family_id',cur.id).order('created_at')]);tasks=t.data||[];TP=q.data||[];const sp=await sb.from('shop_items').select('*').eq('family_id',cur.id).order('created_at');SH=sp.data||[]}}
+
+const card=t=>`<div class="g card tk s-${t.status}" onclick="openTask('${t.id}')"><div class=row><b>${h(t.title)}</b><span class="chip ${t.priority}">${PR[t.priority]}</span></div><div class="row m" style="margin-top:8px"><span class=who>${av(t.assignee,'sm')} ${h(nm(t.assignee))}</span><span class="${dl(t)}">${t.deadline?'⏰ '+fmt(t.deadline):'без срока'}</span></div><div class=m style="margin-top:4px">${ST[t.status]}${(t.checklist||[]).length?` · ✓ ${t.checklist.filter(x=>x.d).length}/${t.checklist.length}`:''}${t.repeat_rule?' · 🔁':''}${t.task_watchers.length?` · 👁 ${t.task_watchers.length}`:''}</div></div>`;
+function tasksV(){
+if(!cur)return`<div class="g card hero"><div class=big>🏠</div><b>Начнём с семьи</b><p class=m>Создайте семью и пригласите близких по почте</p><button class=btn onclick="tab='fam';render()">Создать семью</button></div>`;
+const open=tasks.filter(t=>t.status!='done'),mine=open.filter(t=>t.assignee==me.id),over=mine.filter(t=>dl(t)=='over').length,soon=mine.filter(t=>dl(t)=='soon').length,done=tasks.length-open.length,pc=tasks.length?Math.round(done*100/tasks.length):0,hr=new Date().getHours(),gr=hr<5?'Доброй ночи':hr<12?'Доброе утро':hr<18?'Добрый день':'Добрый вечер';
+const hot=mine.filter(t=>dl(t)).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline));
+const l=tasks.filter(t=>flt=='done'?t.status=='done':t.status!='done'&&(flt=='all'||t.assignee==me.id||t.task_watchers.some(w=>w.user_id==me.id)));
+return`<div class=hi><h1>${gr}, ${h(nm(me.id))}</h1><p class=m style="margin:0 0 10px">Семья «${h(cur.name)}»</p></div>
+<div class=stats><div class="g card stat"><b>${mine.length}</b><span class=m>Мои задачи</span></div><div class="g card stat"><b class="${soon?'soon':''}">${soon}</b><span class=m>Горят в ближайшие сутки</span></div><div class="g card stat"><b class="${over?'over':''}">${over}</b><span class=m>Просрочено</span></div><div class="g card stat"><b>${done}</b><span class=m>Выполнено всей семьёй</span></div></div>
+<div class="g card"><div class=row><b>Прогресс семьи</b><span class=m>${pc}%</span></div><div class=bar><i style="width:${pc}%"></i></div><div class=ld>${members().map(m=>`<div>${av(m.id)}<br><span class=m>${h(m.name.split(' ')[0])}</span><br><b>${open.filter(t=>t.assignee==m.id).length}</b><br><span class=soon>⭐${tasks.filter(t=>t.done_by==m.id).reduce((a,t)=>a+(t.points||0),0)}</span></div>`).join('')}</div></div>
+${hot.length?`<div class=sec>Требуют внимания</div>${hot.map(card).join('')}`:''}
+<div class=sec>Все задачи</div><div class=tabs>${[['mine','Мои'],['all','Все'],['done','Закрытые']].map(([k,v])=>`<button class="${flt==k?'on':''}" onclick="flt='${k}';render()">${v}</button>`).join('')}</div>
+${l.map(card).join('')||`<div class="g card hero"><div class=big>✨</div><b>Здесь пока пусто</b><p class=m>Нажмите ＋ и создайте задачу, в том числе из шаблона</p></div>`}<button class=fab onclick=newTask()>＋</button>`}
+
+function famV(){return`${inInv().map(i=>`<div class="g card"><b>Приглашение в семью «${h(i.family_name)}»</b><div class=row><button class=btn onclick="accept('${i.id}')">Принять</button><button class=ghost onclick="decline('${i.id}')">Отклонить</button></div></div>`).join('')}
+${cur?`<div class="g card"><b>${h(cur.name)}</b><div class=ld>${members().map(m=>`<div>${av(m.id)}<br><span class=m>${h(m.name.split(' ')[0])}</span></div>`).join('')}</div><input id=ie type=email placeholder="Почта для приглашения"><button class=btn onclick=invite()>Пригласить</button>${friendIds().filter(i=>!members().some(m=>m.id==i)).map(i=>`<div class=row style="margin-top:10px"><span>${h(nm(i))} <span class=m>друг</span></span><button class=ghost onclick="inviteFr('${i}')">В семью</button></div>`).join('')}</div>
+<div class="g card"><b>Шаблоны задач</b><p class=m>Слова в фигурных скобках, например {лекарство}, вы заполняете при создании задачи.</p>${TP.map(x=>`<div class=row style="margin:8px 0"><span>${h(x.name)}<br><span class=m>${h(x.title)}</span></span><button class=ghost onclick="delTpl('${x.id}')">✕</button></div>`).join('')}<input id=tn placeholder="Название шаблона"><input id=tti placeholder="Заголовок: Купить {лекарство}"><textarea id=tde rows=2 placeholder="Описание (необязательно)"></textarea><button class=btn onclick=addTpl()>Добавить шаблон</button>${TP.length?'':' <button class=ghost onclick=seedTpl()>Добавить примеры</button>'}</div>`:''}
+<div class="g card"><b>Новая семья</b><input id=fn placeholder="Название"><button class=btn onclick=mkFam()>Создать семью</button></div>`}
+async function tplIns(a){const r=await sb.from('task_templates').insert(a.map(x=>({family_id:cur.id,...x})));if(r.error)return toast('Сначала выполните update1.sql в Supabase');await load();render()}
+function addTpl(){const n=$('#tn').value.trim(),t=$('#tti').value.trim();if(!n||!t)return toast('Укажите название и заголовок');tplIns([{name:n,title:t,description:$('#tde').value}])}
+function seedTpl(){tplIns([{name:'Купить лекарство',title:'Купить лекарство: {название}',description:'Количество и дозировка: {сколько}',priority:'high'},{name:'Оплатить счёт',title:'Оплатить {что}',description:'Сумма: {сумма}'},{name:'Записаться к врачу',title:'Записаться к врачу: {специалист}',description:'Для кого: {кто}'}])}
+async function delTpl(id){await sb.from('task_templates').delete().eq('id',id);await load();render()}
+
+function newTask(){const c=members(),o=m=>`<option value="${m.id}">${h(m.name)}</option>`;
+sheet(`<h3>Новая задача</h3>${TP.length?`<label>Из шаблона</label><select onchange="useTpl(this.value)"><option value="">Без шаблона</option>${TP.map(x=>`<option value="${x.id}">${h(x.name)}</option>`).join('')}</select>`:''}<input id=tt placeholder="Название" oninput=ph()><textarea id=td rows=3 placeholder="Описание" oninput=ph()></textarea><div id=ph></div><label>Повтор<select id=tr><option value="">Не повторять</option><option value=daily>Каждый день</option><option value=weekly>Каждую неделю</option><option value=monthly>Каждый месяц</option></select></label><label>Баллы за выполнение<input id=tpt type=number value=10 min=0></label><label>Чек-лист (по пункту на строке)<textarea id=tck rows=3></textarea></label><label>Дедлайн<input id=tdl type=datetime-local></label><label>Приоритет<select id=tp><option value=mid>Обычный</option><option value=high>Срочно</option><option value=low>Низкий</option></select></label><label>Исполнитель<select id=ta>${c.map(o).join('')}</select></label><label>Наблюдатели</label><div id=tw>${c.filter(m=>m.id!=me.id).map(m=>`<label class=ck><input type=checkbox value="${m.id}"> ${h(m.name)}</label>`).join('')||'<span class=m>В семье пока нет других людей. Пригласите их на вкладке «Семьи».</span>'}</div><button class=btn onclick=saveTask()>Создать задачу</button> <button class=ghost onclick=saveTpl()>Сохранить как шаблон</button>`)}
+function useTpl(id){const x=TP.find(v=>v.id==id);if(!x)return;$('#tt').value=x.title;$('#td').value=x.description||'';$('#tp').value=x.priority;ph()}
+function ph(){const k=[...new Set(($('#tt').value+' '+$('#td').value).match(/\{[^}]+\}/g)||[])],old={};document.querySelectorAll('#ph input').forEach(i=>old[i.dataset.k]=i.value);
+$('#ph').innerHTML=k.length?`<div class=m style="margin-top:8px">Заполните:</div>`+k.map(x=>`<input data-k="${h(x)}" placeholder="${h(x.slice(1,-1))}" value="${h(old[x]||'')}">`).join(''):''}
+const fp=s=>{document.querySelectorAll('#ph input').forEach(i=>{if(i.value.trim())s=s.split(i.dataset.k).join(i.value.trim())});return s};
+function saveTpl(){const t=$('#tt').value.trim();if(!t)return toast('Введите название задачи');const n=prompt('Название шаблона',t.replace(/\{[^}]*\}/g,'').replace(/[:\s]+$/,'')||t);if(n)tplIns([{name:n,title:t,description:$('#td').value,priority:$('#tp').value}]).then(()=>toast('Шаблон сохранён'))}
+async function saveTask(){const t=fp($('#tt').value.trim()),d=$('#tdl').value,ds=fp($('#td').value);if(!t)return toast('Введите название задачи');if(/\{[^}]+\}/.test(t+ds))return toast('Заполните поля шаблона');
+const r=await sb.from('tasks').insert({family_id:cur.id,title:t,description:ds,deadline:d?new Date(d).toISOString():null,priority:$('#tp').value,assignee:$('#ta').value,repeat_rule:$('#tr').value||null,points:+$('#tpt').value||0,checklist:$('#tck').value.split('\n').map(x=>x.trim()).filter(Boolean).map(x=>({t:x,d:false}))}).select().single();
+if(r.error)return toast(r.error.message);
+const w=[...document.querySelectorAll('#tw input:checked')].map(o=>({task_id:r.data.id,user_id:o.value}));if(w.length)await sb.from('task_watchers').insert(w);
+closeSheet();await load();render()}
+
+
+async function setSt(id,s){const t=tasks.find(x=>x.id==id);await sb.from('tasks').update({status:s,done_by:s=='done'?me.id:null}).eq('id',id);
+if(s=='done'&&t.status!='done'&&t.repeat_rule){const n=t.deadline?new Date(t.deadline):new Date(),k={daily:[0,1],weekly:[0,7],monthly:[1,0]}[t.repeat_rule];do{n.setMonth(n.getMonth()+k[0]);n.setDate(n.getDate()+k[1])}while(n<new Date());
+const r=await sb.from('tasks').insert({family_id:t.family_id,title:t.title,description:t.description,priority:t.priority,assignee:t.assignee,repeat_rule:t.repeat_rule,points:t.points,deadline:n.toISOString(),checklist:(t.checklist||[]).map(x=>({t:x.t,d:false}))}).select().single();
+if(r.data&&t.task_watchers.length)await sb.from('task_watchers').insert(t.task_watchers.map(w=>({task_id:r.data.id,user_id:w.user_id})));toast('🔁 Создана следующая задача')}
+await load();render();taskView()}
+const ckV=t=>{const c=t.checklist||[];return`<div class=sec>Чек-лист${c.length?` ${c.filter(x=>x.d).length}/${c.length}`:''}</div>${c.map((x,i)=>`<label class=ck><input type=checkbox ${x.d?'checked':''} onchange="ckTog('${t.id}',${i})"> <span style="${x.d?'opacity:.5;text-decoration:line-through':''}">${h(x.t)}</span></label>`).join('')}<div class=row><input id=ci placeholder="Новый пункт" onkeydown="if(event.key=='Enter')ckAdd('${t.id}')"><button class=ghost onclick="ckAdd('${t.id}')">＋</button></div>`};
+async function ckSave(id,c){await sb.from('tasks').update({checklist:c}).eq('id',id);await load();render();taskView()}
+const ckTog=(id,i)=>{const c=JSON.parse(JSON.stringify(tasks.find(t=>t.id==id).checklist||[]));c[i].d=!c[i].d;ckSave(id,c)};
+const ckAdd=id=>{const v=$('#ci').value.trim();if(v)ckSave(id,[...(tasks.find(t=>t.id==id).checklist||[]),{t:v,d:false}])};
+
 async function thr(m){thm=m||thm;$('#b1').classList.toggle('on',thm=='c');$('#b2').classList.toggle('on',thm=='h');$('#cf').style.display=thm=='c'?'flex':'none';
 const r=thm=='c'?await sb.from('task_comments').select('*').eq('task_id',openId).order('created_at'):await sb.from('task_events').select('*').eq('task_id',openId).order('created_at'),el=$('#th');if(!el)return;
-el.innerHTML=(r.data||[]).map(x=>thm=='c'?`<div class="msg ${x.user_id==me.id?'me':''}"><small class=m>${h(nm(x.user_id))} · ${fmt(x.created_at)}</small><br>${h(x.body)}</div>`:`<div class=m style="margin:6px 0">${fmt(x.created_at)} · ${h(nm(x.user_id))}: ${h(x.text)}</div>`).join('')||'<p class=m>Пока пусто</p>';el.scrollTop=el.scrollHeight}
-async function send(){const b=$('#cm').value.trim();if(!b)return;$('#cm').value='';await sb.from('task_comments').insert({task_id:openId,body:b});thr()}
-async function setSt(id,s){await sb.from('tasks').update({status:s}).eq('id',id);await load();render();taskView()}
+const bd=x=>x.kind=='img'?`<img data-p="${h(x.file_path)}">`:x.kind=='audio'?`<audio controls data-p="${h(x.file_path)}"></audio>`:x.kind=='file'?`<a data-p="${h(x.file_path)}" target=_blank>📄 ${h(x.body)}</a>`:h(x.body);
+el.innerHTML=(r.data||[]).map(x=>thm=='c'?`<div class="msg ${x.user_id==me.id?'me':''}"><small class=m>${h(nm(x.user_id))} · ${fmt(x.created_at)}</small><br>${bd(x)}</div>`:`<div class=m style="margin:6px 0">${fmt(x.created_at)} · ${h(nm(x.user_id))}: ${h(x.text)}</div>`).join('')||'<p class=m>Пока пусто</p>';el.scrollTop=el.scrollHeight;
+const ps=[...el.querySelectorAll('[data-p]')];if(ps.length){const u=await sb.storage.from('files').createSignedUrls(ps.map(e=>e.dataset.p),3600);ps.forEach((e,i)=>{const w=u.data?.[i]?.signedUrl;if(w)e[e.tagName=='A'?'href':'src']=w})}}
+async function up(f,kind){toast('Загружаем…');const p=`${cur.id}/${openId}/${Date.now()}-${f.name.replace(/[^\w.\-]/g,'_')}`;const r=await sb.storage.from('files').upload(p,f,{contentType:f.type});if(r.error)return toast('Не загрузилось: '+r.error.message);await sb.from('task_comments').insert({task_id:openId,body:f.name,kind,file_path:p});thr()}
+function pick1(e){const f=e.target.files[0];if(f)up(f,f.type.startsWith('image/')?'img':'file');e.target.value=''}
+let rec,chunks=[];
+async function mic(){const b=$('#mic');if(rec&&rec.state=='recording'){rec.stop();return}
+try{const st=await navigator.mediaDevices.getUserMedia({audio:true});rec=new MediaRecorder(st);chunks=[];rec.ondataavailable=e=>chunks.push(e.data);
+rec.onstop=()=>{st.getTracks().forEach(x=>x.stop());b.textContent='🎤';const ty=rec.mimeType||'audio/webm';up(new File([new Blob(chunks,{type:ty})],'voice.'+(ty.includes('mp4')?'m4a':'webm'),{type:ty}),'audio')};rec.start();b.textContent='⏹'}catch(e){toast('Нет доступа к микрофону')}}
+
+const shopRow=x=>`<label class="g card ck" style="padding:12px 14px;${x.done?'opacity:.5;text-decoration:line-through':''}"><input type=checkbox ${x.done?'checked':''} onchange="shopTog('${x.id}',this.checked)"> ${h(x.text)}</label>`;
+function shopV(){if(!cur)return'<div class="g card hero"><div class=big>🛒</div><p class=m>Сначала создайте семью</p></div>';
+return`<div class=hi><h1>Покупки</h1><p class=m style="margin:0 0 10px">Общий список семьи «${h(cur.name)}»</p></div><div class="g card"><div class=row><input id=si placeholder="Что купить?" onkeydown="if(event.key=='Enter')shopAdd()"><button class=btn style="margin:0" onclick=shopAdd()>＋</button></div></div>${SH.filter(x=>!x.done).map(shopRow).join('')}${SH.some(x=>x.done)?`<div class="sec row">Куплено<button class=ghost onclick=shopClear()>Очистить</button></div>`+SH.filter(x=>x.done).map(shopRow).join(''):''}${SH.length?'':'<p class=m>Список пуст. Добавьте первую покупку.</p>'}`}
+async function shopAdd(){const v=$('#si').value.trim();if(!v)return;const r=await sb.from('shop_items').insert({family_id:cur.id,text:v});if(r.error)return toast('Сначала выполните update2.sql в Supabase');await load();render()}
+async function shopTog(id,d){await sb.from('shop_items').update({done:d}).eq('id',id);await load();render()}
+async function shopClear(){await sb.from('shop_items').delete().eq('family_id',cur.id).eq('done',true);await load();render()}
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 (async()=>{const{data:{session}}=await sb.auth.getSession();session?start(session.user):authView()})();
