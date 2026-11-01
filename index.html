@@ -33,10 +33,13 @@ nav button{flex:1;background:0;border:0;border-radius:14px;padding:7px 4px;color
 .hero{text-align:center;padding:28px 16px}.big{font-size:46px}.s-work{border-left:3px solid #2ec4f1}.s-review{border-left:3px solid #ffc04d}.s-done{border-left:3px solid #4ade80;opacity:.8}.s-new{border-left:3px solid #8f7bff}
 .ld{display:flex;gap:14px;overflow:auto;margin-top:8px}.ld div{text-align:center;min-width:54px}.sec{margin:18px 2px 2px;color:#aab0d0;font-size:13px}.ck{display:flex;gap:10px;align-items:center;padding:6px 0;margin:0;color:#e8eaf6;font-size:15px}.ck input{width:20px;height:20px;margin:0}.hi h1{font-size:26px;margin:6px 0 2px}.msg img{max-width:100%;border-radius:12px;margin-top:6px}.msg audio{width:100%;margin-top:6px}.sys{text-align:center;color:#9aa1c4;font-size:12px;margin:10px 0}.msg.res{border:1px solid #4ade80;background:#4ade8022}.rb{background:0;border:0;color:#9aa1c4;font-size:12px;padding:2px 0;float:right}.sug{padding:9px 10px;border-radius:10px;background:#ffffff0c;margin:4px 0;cursor:pointer}.chip{cursor:pointer;margin:2px}.auth{max-width:380px;margin:12vh auto;padding:22px}h1,h3{margin:0 0 6px}
 </style></head><body><div id="app"></div><div id="sheet"></div><div id="toast"></div>
+<script>addEventListener('error',e=>{if(!/no config/.test(e.message||''))document.getElementById('app').innerHTML='<div style="padding:20px;color:#ffb4b4">Ошибка: '+e.message+'</div>'})</script>
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
-const URL_='ВСТАВЬТЕ_Project_URL',KEY='ВСТАВЬТЕ_anon_public_key';
-const sb=supabase.createClient(URL_,KEY);
+const CFG=window.APP_CONFIG||{};
+if(!/^https:\/\/.+\.supabase\.co/.test(CFG.url||'')||!CFG.key||/ВСТАВЬТЕ/.test(CFG.key)){document.getElementById('app').innerHTML='<div style="max-width:380px;margin:12vh auto;padding:22px;background:#ffffff12;border-radius:18px"><h2>Нужны ключи Supabase</h2><p>Откройте файл config.js в репозитории и вставьте Project URL и ключ, затем обновите страницу.</p></div>';throw new Error('no config')}
+const sb=supabase.createClient(CFG.url,CFG.key);
 const $=s=>document.querySelector(s),h=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const ST={new:'Новая',work:'В работе',review:'На проверке',done:'Закрыта'},PR={low:'Низкий',mid:'Обычный',high:'Срочно'};
 let me,P={},fams=[],cur,tasks=[],invs=[],fr=[],tab='tasks',flt='mine',openId=null,mode='in',thm='c';
